@@ -66,7 +66,7 @@ export default function RegisterScreen() {
       <Surface style={styles.surface}>
         <View style={styles.content}>
           <View style={styles.greetingContainer}>
-            <Text style={styles.greeting}>Crie já sua conta!</Text>
+            <Text style={styles.greeting}>Olá!</Text>
           </View>
 
           <View style={styles.inputContainer}>
@@ -87,6 +87,7 @@ export default function RegisterScreen() {
                 activeUnderlineColor="transparent"
                 textColor="#000"
                 placeholderTextColor="#666"
+                theme={{ colors: { primary: '#9747FF' } }}
               />
             </View>
 
@@ -109,6 +110,7 @@ export default function RegisterScreen() {
                 activeUnderlineColor="transparent"
                 textColor="#000"
                 placeholderTextColor="#666"
+                theme={{ colors: { primary: '#9747FF' } }}
               />
             </View>
 
@@ -137,6 +139,7 @@ export default function RegisterScreen() {
                 activeUnderlineColor="transparent"
                 textColor="#000"
                 placeholderTextColor="#666"
+                theme={{ colors: { primary: '#9747FF' } }}
               />
             </View>
 
@@ -165,6 +168,7 @@ export default function RegisterScreen() {
                 activeUnderlineColor="transparent"
                 textColor="#000"
                 placeholderTextColor="#666"
+                theme={{ colors: { primary: '#9747FF' } }}
               />
             </View>
 
@@ -195,6 +199,15 @@ export default function RegisterScreen() {
               buttonColor="#9747FF"
             >
               Criar conta
+            </Button>
+
+            <Button
+              mode="text"
+              onPress={() => router.back()}
+              style={styles.backButton}
+              textColor="#9747FF"
+            >
+              Voltar ao login
             </Button>
           </View>
         </View>
@@ -247,20 +260,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 25,
-    paddingLeft: 16, // aumentado de 8 para 16
+    paddingLeft: 16,
     paddingRight: 16,
     height: 50,
     backgroundColor: '#F8F8F8',
   },
   inputIcon: {
-    marginRight: 12, // adicionado margin à direita do ícone
+    marginRight: 12,
     marginLeft: 0,
   },
   input: {
     flex: 1,
     backgroundColor: 'transparent',
     height: 50,
-    paddingLeft: 8, // adicionado padding à esquerda do texto
+    paddingLeft: 8,
   },
   termsContainer: {
     flexDirection: 'row',
@@ -294,6 +307,9 @@ const styles = StyleSheet.create({
   },
   buttonContent: {
     height: 50,
+  },
+  backButton: {
+    marginTop: 16,
   },
   error: {
     color: '#B00020',
