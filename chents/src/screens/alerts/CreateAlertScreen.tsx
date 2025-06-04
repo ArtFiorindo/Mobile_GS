@@ -18,16 +18,74 @@ export default function CreateAlertScreen() {
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [cityName, setCityName] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
   const [locationLoading, setLocationLoading] = useState(true);
+  const [dateTime, setDateTime] = useState('');
 
   useEffect(() => {
-    // Verifica autenticação
     if (!auth.currentUser) {
       router.replace('/auth/login');
       return;
     }
     requestLocationPermission();
+    updateDateTime();
   }, []);
+
+  const updateDateTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    
+    const formatted = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    setDateTime(formatted);
+  };
+
+  const getCityFromCoordinates = async (latitude: number, longitude: number) => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'FloodAlertApp/1.0'
+          }
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (data && data.address) {
+        const city = data.address.city || 
+                    data.address.town || 
+                    data.address.village || 
+                    data.address.municipality;
+        
+        const hood = data.address.suburb || 
+                    data.address.neighbourhood ||
+                    data.address.residential ||
+                    data.address.quarter;
+                    
+        if (city) {
+          console.log('Cidade encontrada:', city);
+          setCityName(city);
+        }
+
+        if (hood) {
+          console.log('Bairro encontrado:', hood);
+          setNeighborhood(hood);
+        }
+
+        console.log('Dados completos do endereço:', data.address);
+      }
+    } catch (error) {
+      console.error('Erro ao obter endereço:', error);
+    }
+  };
 
   const requestLocationPermission = async () => {
     try {
@@ -49,6 +107,11 @@ export default function CreateAlertScreen() {
       
       setLocation(currentLocation);
 
+      await getCityFromCoordinates(
+        currentLocation.coords.latitude,
+        currentLocation.coords.longitude
+      );
+
     } catch (error) {
       console.error('Erro ao obter localização:', error);
       RNAlert.alert(
@@ -58,6 +121,10 @@ export default function CreateAlertScreen() {
     } finally {
       setLocationLoading(false);
     }
+  };
+
+  const isButtonDisabled = () => {
+    return loading || locationLoading || !message.trim();
   };
 
   const handleCreateAlert = async () => {
@@ -87,14 +154,22 @@ export default function CreateAlertScreen() {
 
     try {
       setLoading(true);
+      updateDateTime();
+      
+      const locationName = neighborhood 
+        ? `${cityName} - ${neighborhood}`
+        : cityName;
+
       console.log('Iniciando criação do alerta...', {
         userId: auth.currentUser.uid,
+        userLogin: 'ArtFiorindo',
         message: message.trim(),
         coordinates: {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         },
-        cityName: cityName.trim(),
+        cityName: locationName.trim(),
+        dateTime: dateTime,
       });
 
       const alertId = await createAlert({
@@ -103,7 +178,9 @@ export default function CreateAlertScreen() {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         },
-        cityName: cityName.trim(),
+        cityName: locationName.trim(),
+        dateTime: dateTime,
+        userLogin: 'ArtFiorindo',
       });
 
       console.log('Alerta criado com sucesso:', alertId);
@@ -117,6 +194,7 @@ export default function CreateAlertScreen() {
             onPress: () => {
               setMessage('');
               setCityName('');
+              setNeighborhood('');
               router.back();
             }
           }
@@ -140,6 +218,13 @@ export default function CreateAlertScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.content}
         >
+          <Text style={styles.dateTime}>
+            {`Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): ${dateTime}`}
+          </Text>
+          <Text style={styles.userLogin}>
+            {`Current User's Login: ${auth.currentUser?.email || 'ArtFiorindo'}`}
+          </Text>
+
           <Text style={styles.label}>Descreva a situação da enchente:</Text>
           
           <TextInput
@@ -148,21 +233,28 @@ export default function CreateAlertScreen() {
             onChangeText={setMessage}
             multiline
             numberOfLines={4}
-            style={styles.input}
+            style={[
+              styles.input,
+              !message.trim() && styles.inputRequired
+            ]}
             mode="outlined"
-            outlineColor="#E0E0E0"
+            outlineColor={message.trim() ? "#E0E0E0" : "#B00020"}
             activeOutlineColor="#9747FF"
           />
 
-          <Text style={styles.label}>Cidade:</Text>
+          <Text style={styles.label}>Localização:</Text>
           <TextInput
-            placeholder="Digite o nome da cidade"
-            value={cityName}
-            onChangeText={setCityName}
+            placeholder="Obtendo localização automaticamente..."
+            value={neighborhood ? `${cityName} - ${neighborhood}` : cityName}
+            onChangeText={(text) => {
+              setCityName(text);
+              setNeighborhood('');
+            }}
             style={styles.cityInput}
             mode="outlined"
             outlineColor="#E0E0E0"
             activeOutlineColor="#9747FF"
+            editable={true}
           />
 
           <View style={styles.locationContainer}>
@@ -185,12 +277,21 @@ export default function CreateAlertScreen() {
             mode="contained"
             onPress={handleCreateAlert}
             loading={loading}
-            disabled={loading || locationLoading}
-            style={styles.button}
+            disabled={isButtonDisabled()}
+            style={[
+              styles.button,
+              isButtonDisabled() && styles.buttonDisabled
+            ]}
             contentStyle={styles.buttonContent}
           >
             {loading ? 'Registrando alerta...' : 'Registrar Alerta'}
           </Button>
+
+          {!message.trim() && (
+            <Text style={styles.requiredFieldMessage}>
+              * Por favor, descreva a situação para registrar o alerta
+            </Text>
+          )}
         </KeyboardAvoidingView>
       </Surface>
     </View>
@@ -210,6 +311,16 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
   },
+  dateTime: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  userLogin: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+  },
   label: {
     fontSize: 16,
     fontWeight: '500',
@@ -220,6 +331,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginBottom: 24,
     minHeight: 120,
+  },
+  inputRequired: {
+    borderColor: '#B00020',
   },
   cityInput: {
     backgroundColor: '#fff',
@@ -243,8 +357,18 @@ const styles = StyleSheet.create({
   },
   button: {
     borderRadius: 25,
+    backgroundColor: '#9747FF',
+  },
+  buttonDisabled: {
+    backgroundColor: '#D1D1D1',
   },
   buttonContent: {
     height: 50,
   },
+  requiredFieldMessage: {
+    color: '#B00020',
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
+  }
 });
