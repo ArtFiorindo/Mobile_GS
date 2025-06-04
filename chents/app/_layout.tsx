@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Tabs } from 'expo-router';
+import { Stack } from 'expo-router';
+import { View } from 'react-native';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
-import { Image } from 'react-native';
 import { auth } from '@services/firebase';
-import { Ionicons } from '@expo/vector-icons';
+import CustomBottomTabs from '@components/CustomBottomTabs';
 
 const theme = {
   ...MD3LightTheme,
@@ -27,114 +27,38 @@ export default function RootLayout() {
     return unsubscribe;
   }, []);
 
-  // Não renderiza nada até que o estado de autenticação seja inicializado
-  if (!initialized) {
-    return null;
-  }
-
-  if (!user) {
-    return (
-      <PaperProvider theme={theme}>
-        <Tabs
-          screenOptions={{
-            tabBarStyle: { display: 'none' },
-            headerShown: false,
-          }}
-        >
-          <Tabs.Screen name="auth/login" />
-          <Tabs.Screen name="auth/register" />
-          <Tabs.Screen name="auth/forgot-password" />
-          
-          {/* Esconde estas rotas da navegação */}
-          <Tabs.Screen 
-            name="home" 
-            options={{ href: null }} 
-          />
-          <Tabs.Screen 
-            name="alerts/create" 
-            options={{ href: null }} 
-          />
-          <Tabs.Screen 
-            name="map" 
-            options={{ href: null }} 
-          />
-          <Tabs.Screen 
-            name="settings" 
-            options={{ href: null }} 
-          />
-        </Tabs>
-      </PaperProvider>
-    );
-  }
+  if (!initialized) return null;
 
   return (
     <PaperProvider theme={theme}>
-      <Tabs
-        screenOptions={{
-          headerStyle: { backgroundColor: theme.colors.primary },
-          headerTintColor: '#fff',
-          tabBarActiveTintColor: theme.colors.primary,
-          tabBarShowLabel: false,
-          tabBarStyle: {
-            height: 60,
-            paddingBottom: 8,
-            paddingTop: 8,
-          },
-          headerTitle: () => (
-            <Image
-              source={require('../assets/images/logo.png')}
-              style={{ width: 120, height: 40, resizeMode: 'contain' }}
+      {user ? (
+        <View style={{ flex: 1 }}>
+          <Stack
+            screenOptions={{
+              headerStyle: { backgroundColor: theme.colors.primary },
+              headerTintColor: '#fff',
+            }}
+          >
+            <Stack.Screen name="home" options={{ title: 'Início' }} />
+            <Stack.Screen 
+              name="alerts/create" 
+              options={{ title: 'Novo Alerta' }} 
             />
-          ),
-        }}
-      >
-        <Tabs.Screen
-          name="home"
-          options={{
-            tabBarIcon: ({ color }) => (
-              <Ionicons name="home" size={28} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="alerts/create"
-          options={{
-            tabBarIcon: ({ color }) => (
-              <Ionicons name="alert-circle" size={28} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="map"
-          options={{
-            tabBarIcon: ({ color }) => (
-              <Ionicons name="map" size={28} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="settings"
-          options={{
-            tabBarIcon: ({ color }) => (
-              <Ionicons name="settings" size={28} color={color} />
-            ),
-          }}
-        />
-
-        {/* Esconde rotas de auth quando logado */}
-        <Tabs.Screen 
-          name="auth/login" 
-          options={{ href: null }} 
-        />
-        <Tabs.Screen 
-          name="auth/register" 
-          options={{ href: null }} 
-        />
-        <Tabs.Screen 
-          name="auth/forgot-password" 
-          options={{ href: null }} 
-        />
-      </Tabs>
+            <Stack.Screen name="map" options={{ title: 'Mapa' }} />
+            <Stack.Screen 
+              name="settings" 
+              options={{ title: 'Configurações' }} 
+            />
+          </Stack>
+          <CustomBottomTabs />
+        </View>
+      ) : (
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="auth/login" />
+          <Stack.Screen name="auth/register" />
+          <Stack.Screen name="auth/forgot-password" />
+        </Stack>
+      )}
     </PaperProvider>
   );
 }
