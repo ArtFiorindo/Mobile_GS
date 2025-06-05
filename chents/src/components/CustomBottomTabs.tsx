@@ -18,9 +18,9 @@ export default function CustomBottomTabs() {
       path: '/alerts/create',
     },
     {
-      name: 'map',
+      name: 'alert',
       icon: 'map',
-      path: '/map/map',
+      path: '/alerts/alert',
     },
     {
       name: 'settings',
