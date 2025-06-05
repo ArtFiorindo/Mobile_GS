@@ -5,8 +5,9 @@ export interface Alert {
     latitude: number;
     longitude: number;
   };
-  createdAt: string;
+  createdAt: any;
   message: string;
   userId: string;
   userName: string;
+  severity: 'low' | 'medium' | 'high'; // Novo campo
 }

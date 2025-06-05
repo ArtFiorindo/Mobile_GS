@@ -5,12 +5,36 @@ import {
   KeyboardAvoidingView, 
   Platform,
   Alert as RNAlert,
+  ScrollView,
+  SafeAreaView,
 } from 'react-native';
-import { TextInput, Button, Text, Surface } from 'react-native-paper';
+import { 
+  TextInput, 
+  Button, 
+  Text, 
+  Surface, 
+  SegmentedButtons,
+  IconButton,
+  Portal,
+  Modal,
+} from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { createAlert } from '@services/alerts';
 import { auth } from '@services/firebase';
+import { Ionicons } from '@expo/vector-icons';
+
+interface AlertData {
+  message: string;
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  cityName: string;
+  dateTime: string;
+  userLogin: string;
+  severity: 'low' | 'medium' | 'high';
+}
 
 export default function CreateAlertScreen() {
   const router = useRouter();
@@ -20,7 +44,9 @@ export default function CreateAlertScreen() {
   const [cityName, setCityName] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
   const [locationLoading, setLocationLoading] = useState(true);
-  const [dateTime, setDateTime] = useState('');
+  const [dateTime, setDateTime] = useState('2025-06-05 21:59:45');
+  const [severity, setSeverity] = useState<'low' | 'medium' | 'high'>('medium');
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -32,16 +58,7 @@ export default function CreateAlertScreen() {
   }, []);
 
   const updateDateTime = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    
-    const formatted = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    setDateTime(formatted);
+    setDateTime('2025-06-05 21:59:45');
   };
 
   const getCityFromCoordinates = async (latitude: number, longitude: number) => {
@@ -71,16 +88,12 @@ export default function CreateAlertScreen() {
                     data.address.quarter;
                     
         if (city) {
-          console.log('Cidade encontrada:', city);
           setCityName(city);
         }
 
         if (hood) {
-          console.log('Bairro encontrado:', hood);
           setNeighborhood(hood);
         }
-
-        console.log('Dados completos do endereço:', data.address);
       }
     } catch (error) {
       console.error('Erro ao obter endereço:', error);
@@ -123,10 +136,6 @@ export default function CreateAlertScreen() {
     }
   };
 
-  const isButtonDisabled = () => {
-    return loading || locationLoading || !message.trim();
-  };
-
   const handleCreateAlert = async () => {
     if (!auth.currentUser) {
       RNAlert.alert('Erro', 'Você precisa estar logado para criar um alerta');
@@ -160,18 +169,6 @@ export default function CreateAlertScreen() {
         ? `${cityName} - ${neighborhood}`
         : cityName;
 
-      console.log('Iniciando criação do alerta...', {
-        userId: auth.currentUser.uid,
-        userLogin: 'ArtFiorindo',
-        message: message.trim(),
-        coordinates: {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        },
-        cityName: locationName.trim(),
-        dateTime: dateTime,
-      });
-
       const alertId = await createAlert({
         message: message.trim(),
         coordinates: {
@@ -179,11 +176,10 @@ export default function CreateAlertScreen() {
           longitude: location.coords.longitude,
         },
         cityName: locationName.trim(),
-        dateTime: dateTime,
+        dateTime,
         userLogin: 'ArtFiorindo',
+        severity,
       });
-
-      console.log('Alerta criado com sucesso:', alertId);
 
       RNAlert.alert(
         'Alerta criado',
@@ -212,163 +208,362 @@ export default function CreateAlertScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Surface style={styles.surface}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.content}
+    <SafeAreaView style={styles.container}>
+      {/* Background Elements */}
+      <View style={styles.backgroundContainer}>
+        <View style={styles.topWave} />
+        <View style={styles.middleWave} />
+        <View style={styles.bottomWave} />
+      </View>
+
+      <ScrollView style={styles.scrollView}>
+        <Surface style={styles.surface}>
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.content}
+          >
+            {/* Header Section */}
+            <View style={styles.headerSection}>
+              <Text style={styles.headerTitle}>Criar Alerta</Text>
+              <Text style={styles.headerSubtitle}>
+                Informe os detalhes da situação
+              </Text>
+            </View>
+
+            {/* Location Section */}
+            <View style={styles.locationSection}>
+              <View style={styles.locationHeader}>
+                <Text style={styles.sectionTitle}>Localização</Text>
+                <IconButton
+                  icon="map-marker-radius"
+                  size={24}
+                  iconColor="#9747FF"
+                  onPress={() => setShowLocationModal(true)}
+                />
+              </View>
+              
+              {locationLoading ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Obtendo localização...</Text>
+                </View>
+              ) : location ? (
+                <View style={styles.locationInfo}>
+                  <Text style={styles.locationText}>
+                    {cityName}{neighborhood ? ` - ${neighborhood}` : ''}
+                  </Text>
+                  <Text style={styles.coordinatesText}>
+                    {location.coords.latitude.toFixed(6)}°, {location.coords.longitude.toFixed(6)}°
+                  </Text>
+                </View>
+              ) : (
+                <Button 
+                  mode="contained"
+                  onPress={requestLocationPermission}
+                  style={styles.locationButton}
+                >
+                  Obter Localização
+                </Button>
+              )}
+            </View>
+
+            {/* Severity Section */}
+            <View style={styles.severitySection}>
+              <Text style={styles.sectionTitle}>Nível de Severidade</Text>
+              <SegmentedButtons
+                value={severity}
+                onValueChange={value => setSeverity(value as 'low' | 'medium' | 'high')}
+                buttons={[
+                  {
+                    value: 'low',
+                    label: 'Baixo',
+                    style: [
+                      styles.severityButton,
+                      severity === 'low' && styles.severityButtonLowSelected
+                    ],
+                    checkedColor: '#4CAF50'
+                  },
+                  {
+                    value: 'medium',
+                    label: 'Médio',
+                    style: [
+                      styles.severityButton,
+                      severity === 'medium' && styles.severityButtonMediumSelected
+                    ],
+                    checkedColor: '#FFC107'
+                  },
+                  {
+                    value: 'high',
+                    label: 'Alto',
+                    style: [
+                      styles.severityButton,
+                      severity === 'high' && styles.severityButtonHighSelected
+                    ],
+                    checkedColor: '#FF5252'
+                  }
+                ]}
+              />
+            </View>
+
+            {/* Message Section */}
+            <View style={styles.messageSection}>
+              <Text style={styles.sectionTitle}>Descrição da Situação</Text>
+              <TextInput
+                mode="outlined"
+                multiline
+                numberOfLines={4}
+                value={message}
+                onChangeText={setMessage}
+                placeholder="Descreva a situação da enchente..."
+                style={styles.messageInput}
+                outlineStyle={styles.inputOutline}
+              />
+            </View>
+
+            {/* Submit Button */}
+            <Button
+              mode="contained"
+              onPress={handleCreateAlert}
+              loading={loading}
+              disabled={loading || !location || !message.trim()}
+              style={styles.submitButton}
+              labelStyle={styles.submitButtonLabel}
+            >
+              {loading ? 'Criando Alerta...' : 'Criar Alerta'}
+            </Button>
+          </KeyboardAvoidingView>
+        </Surface>
+      </ScrollView>
+
+      {/* Location Modal */}
+      <Portal>
+        <Modal
+          visible={showLocationModal}
+          onDismiss={() => setShowLocationModal(false)}
+          contentContainerStyle={styles.modalContainer}
         >
-          <Text style={styles.dateTime}>
-            {`Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): ${dateTime}`}
-          </Text>
-          <Text style={styles.userLogin}>
-            {`Current User's Login: ${auth.currentUser?.email || 'ArtFiorindo'}`}
-          </Text>
-
-          <Text style={styles.label}>Descreva a situação da enchente:</Text>
-          
-          <TextInput
-            placeholder="Ex: Rua completamente alagada, nível da água na altura do joelho"
-            value={message}
-            onChangeText={setMessage}
-            multiline
-            numberOfLines={4}
-            style={[
-              styles.input,
-              !message.trim() && styles.inputRequired
-            ]}
-            mode="outlined"
-            outlineColor={message.trim() ? "#E0E0E0" : "#B00020"}
-            activeOutlineColor="#9747FF"
-          />
-
-          <Text style={styles.label}>Localização:</Text>
-          <TextInput
-            placeholder="Obtendo localização automaticamente..."
-            value={neighborhood ? `${cityName} - ${neighborhood}` : cityName}
-            onChangeText={(text) => {
-              setCityName(text);
-              setNeighborhood('');
-            }}
-            style={styles.cityInput}
-            mode="outlined"
-            outlineColor="#E0E0E0"
-            activeOutlineColor="#9747FF"
-            editable={true}
-          />
-
-          <View style={styles.locationContainer}>
-            {locationLoading ? (
-              <Text style={styles.locationInfo}>
-                Obtendo sua localização...
-              </Text>
-            ) : location ? (
-              <Text style={styles.locationInfo}>
-                Localização obtida com sucesso
-              </Text>
-            ) : (
-              <Text style={[styles.locationInfo, styles.locationError]}>
-                Não foi possível obter sua localização
-              </Text>
-            )}
+          <Text style={styles.modalTitle}>Detalhes da Localização</Text>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalLabel}>Cidade:</Text>
+            <TextInput
+              mode="outlined"
+              value={cityName}
+              onChangeText={setCityName}
+              style={styles.modalInput}
+              outlineStyle={styles.inputOutline}
+            />
+            <Text style={styles.modalLabel}>Bairro:</Text>
+            <TextInput
+              mode="outlined"
+              value={neighborhood}
+              onChangeText={setNeighborhood}
+              style={styles.modalInput}
+              outlineStyle={styles.inputOutline}
+            />
           </View>
-
           <Button
             mode="contained"
-            onPress={handleCreateAlert}
-            loading={loading}
-            disabled={isButtonDisabled()}
-            style={[
-              styles.button,
-              isButtonDisabled() && styles.buttonDisabled
-            ]}
-            contentStyle={styles.buttonContent}
+            onPress={() => setShowLocationModal(false)}
+            style={styles.modalButton}
           >
-            {loading ? 'Registrando alerta...' : 'Registrar Alerta'}
+            Confirmar
           </Button>
-
-          {!message.trim() && (
-            <Text style={styles.requiredFieldMessage}>
-              * Por favor, descreva a situação para registrar o alerta
-            </Text>
-          )}
-        </KeyboardAvoidingView>
-      </Surface>
-    </View>
+        </Modal>
+      </Portal>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
+  },
+  backgroundContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 380,
+    overflow: 'hidden',
+  },
+  topWave: {
+    position: 'absolute',
+    top: -30,
+    left: -15,
+    right: -15,
+    height: 120,
+    backgroundColor: '#9747FF',
+    borderBottomLeftRadius: 140,
+    borderBottomRightRadius: 90,
+    transform: [
+      { scaleX: 1.2 },
+      { rotate: '-5deg' }
+    ],
+    opacity: 0.85,
+  },
+  middleWave: {
+    position: 'absolute',
+    top: -50,
+    left: -40,
+    right: -20,
+    height: 260,
+    backgroundColor: '#B785FF',
+    borderBottomLeftRadius: 80,
+    borderBottomRightRadius: 160,
+    transform: [
+      { scaleX: 1.3 },
+      { rotate: '3deg' }
+    ],
+    opacity: 0.6,
+  },
+  bottomWave: {
+    position: 'absolute',
+    top: -20,
+    left: -30,
+    right: -40,
+    height: 640,
+    backgroundColor: '#DBC4FF',
+    borderBottomLeftRadius: 180,
+    borderBottomRightRadius: 120,
+    transform: [
+      { scaleX: 1.1 },
+      { rotate: '-2deg' }
+    ],
+    opacity: 0.4,
+  },
+  scrollView: {
+    flex: 1,
   },
   surface: {
-    flex: 1,
+    margin: 16,
+    marginTop: 100,
+    borderRadius: 24,
+    elevation: 4,
     backgroundColor: '#fff',
+    maxWidth: 500,
+    alignSelf: 'center',
+    width: '90%',
   },
   content: {
-    flex: 1,
     padding: 24,
   },
-  dateTime: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+  headerSection: {
+    marginBottom: 24,
   },
-  userLogin: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 12,
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
     color: '#333',
+    marginBottom: 8,
   },
-  input: {
-    backgroundColor: '#fff',
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#666',
+  },
+  locationSection: {
     marginBottom: 24,
-    minHeight: 120,
   },
-  inputRequired: {
-    borderColor: '#B00020',
+  locationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  cityInput: {
-    backgroundColor: '#fff',
-    marginBottom: 24,
-    height: 50,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
   },
-  locationContainer: {
-    marginBottom: 24,
-    padding: 12,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+  loadingContainer: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#666',
+    fontSize: 16,
   },
   locationInfo: {
-    color: '#666',
+    backgroundColor: '#F8F2FF',
+    padding: 16,
+    borderRadius: 12,
+  },
+  locationText: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 8,
+  },
+  coordinatesText: {
     fontSize: 14,
+    color: '#666',
   },
-  locationError: {
-    color: '#B00020',
-  },
-  button: {
-    borderRadius: 25,
+  locationButton: {
     backgroundColor: '#9747FF',
   },
-  buttonDisabled: {
-    backgroundColor: '#D1D1D1',
+  severitySection: {
+    marginBottom: 24,
   },
-  buttonContent: {
-    height: 50,
+  severityButton: {
+    borderWidth: 1,
+    borderColor: '#9747FF',
   },
-  requiredFieldMessage: {
-    color: '#B00020',
-    fontSize: 12,
-    marginTop: 8,
-    textAlign: 'center',
-  }
+  severityButtonLowSelected: {
+    backgroundColor: '#4CAF5015',
+  },
+  severityButtonMediumSelected: {
+    backgroundColor: '#FFC10715',
+  },
+  severityButtonHighSelected: {
+    backgroundColor: '#FF525215',
+  },
+  messageSection: {
+    marginBottom: 24,
+  },
+    messageInput: {
+    backgroundColor: '#fff',
+  },
+  inputOutline: {
+    borderColor: '#9747FF',
+    borderRadius: 12,
+  },
+  submitButton: {
+    backgroundColor: '#B785FF',
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  submitButtonLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    margin: 20,
+    padding: 20,
+    borderRadius: 16,
+    maxWidth: 500,
+    alignSelf: 'center',
+    width: '90%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+  },
+  modalContent: {
+    marginBottom: 16,
+  },
+  modalLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  modalInput: {
+    backgroundColor: '#fff',
+    marginBottom: 16,
+  },
+  modalButton: {
+    backgroundColor: '#9747FF',
+  },
 });

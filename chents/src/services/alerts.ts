@@ -8,6 +8,7 @@ interface CreateAlertParams {
     longitude: number;
   };
   cityName: string;
+  severity: 'low' | 'medium' | 'high'; // Adicionado o campo severity
 }
 
 export const createAlert = async (params: CreateAlertParams) => {
@@ -25,6 +26,7 @@ export const createAlert = async (params: CreateAlertParams) => {
       coordinates: new GeoPoint(params.coordinates.latitude, params.coordinates.longitude),
       cityName: params.cityName,
       createdAt: Timestamp.now(),
+      severity: params.severity, // Adicionado o campo severity
     };
 
     const docRef = await addDoc(alertsRef, alertData);

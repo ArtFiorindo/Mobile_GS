@@ -35,20 +35,14 @@ export default function RootLayout() {
         <View style={{ flex: 1 }}>
           <Stack
             screenOptions={{
-              headerStyle: { backgroundColor: theme.colors.primary },
-              headerTintColor: '#fff',
+              headerShown: false, // Remove todos os headers
+              contentStyle: { backgroundColor: '#fff' }
             }}
           >
-            <Stack.Screen name="home" options={{ title: 'Início' }} />
-            <Stack.Screen 
-              name="alerts/create" 
-              options={{ title: 'Novo Alerta' }} 
-            />
-            <Stack.Screen name="map" options={{ title: 'Mapa' }} />
-            <Stack.Screen 
-              name="settings" 
-              options={{ title: 'Configurações' }} 
-            />
+            <Stack.Screen name="home" />
+            <Stack.Screen name="alerts/create" />
+            <Stack.Screen name="map" />
+            <Stack.Screen name="settings" />
           </Stack>
           <CustomBottomTabs />
         </View>

@@ -7,14 +7,12 @@ import {
   TouchableOpacity 
 } from 'react-native';
 import { 
-  Surface, 
   Text, 
   Button, 
   TextInput, 
   Chip, 
   Portal, 
   Modal, 
-  Appbar, 
   Card, 
   Title, 
   Paragraph,
@@ -23,7 +21,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
-import { db } from '../../services/firebase';
+import { db, auth } from '../../services/firebase';
 import * as Location from 'expo-location';
 
 interface Alert {
@@ -37,10 +35,11 @@ interface Alert {
   message: string;
   userId: string;
   userName: string;
+  severity: 'low' | 'medium' | 'high';
 }
 
 const formatDateTime = () => {
-  return "2025-06-05 02:52:32";
+  return "2025-06-05 21:01:47";
 };
 
 const formatFirestoreTimestamp = (timestamp: any) => {
@@ -114,11 +113,11 @@ export default function AlertScreen() {
           createdAt: formatFirestoreTimestamp(data.createdAt),
           message: data.message || '',
           userId: data.userId || '',
-          userName: data.userName || 'Usuário Anônimo'
+          userName: data.userName || 'Usuário Anônimo',
+          severity: data.severity || 'medium',
         });
       });
 
-      console.log('Alertas carregados:', fetchedAlerts.length);
       setAlerts(fetchedAlerts);
       setFilteredAlerts(fetchedAlerts);
     } catch (error) {
@@ -175,36 +174,61 @@ export default function AlertScreen() {
     setFilteredAlerts(filtered);
   };
 
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'low':
+        return '#4CAF50';
+      case 'medium':
+        return '#FFC107';
+      case 'high':
+        return '#FF5252';
+      default:
+        return '#9747FF';
+    }
+  };
+
+  const getSeverityText = (severity: string) => {
+    switch (severity) {
+      case 'low':
+        return 'Baixo';
+      case 'medium':
+        return 'Médio';
+      case 'high':
+        return 'Alto';
+      default:
+        return 'Médio';
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <Appbar.Header style={styles.header}>
-        <Appbar.BackAction onPress={() => router.back()} color="#fff" />
-        <Appbar.Content title="Alertas de Enchente" color="#fff" />
-        <Appbar.Action 
-          icon="refresh" 
-          color="#fff" 
-          onPress={fetchAlerts}
-          disabled={isLoading}
-        />
-      </Appbar.Header>
+      {/* Background Elements */}
+      <View style={styles.backgroundContainer}>
+        <View style={styles.topWave} />
+        <View style={styles.middleWave} />
+        <View style={styles.bottomWave} />
+      </View>
 
-      <View style={styles.dateTimeHeader}>
-        <Text style={styles.dateTimeText}>
-          Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): {currentDateTime}
+      {/* Welcome Section */}
+      <View style={styles.welcomeSection}>
+        <Text style={styles.welcomeText}>
+          Olá, {auth.currentUser?.displayName || 'Usuário'}
         </Text>
-        <Text style={styles.userLoginText}>
-          Current User's Login: ArtFiorindo
+        <Text style={styles.subtitleText}>
+          Acompanhe os alertas em sua região
         </Text>
       </View>
 
-      <View style={styles.filterBar}>
+      {/* Filters */}
+      <View style={styles.filterContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <Chip
             mode="outlined"
             selected={useRadiusFilter}
             onPress={() => setUseRadiusFilter(!useRadiusFilter)}
-            style={styles.filterChip}
-            selectedColor="#9747FF"
+            style={[styles.filterChip, useRadiusFilter && styles.selectedChip]}
+            selectedColor="#fff"
+            textStyle={useRadiusFilter ? styles.selectedChipText : styles.chipText}
           >
             Raio de 5km
           </Chip>
@@ -212,8 +236,9 @@ export default function AlertScreen() {
             mode="outlined"
             selected={showRecentFilter}
             onPress={() => setShowRecentFilter(!showRecentFilter)}
-            style={styles.filterChip}
-            selectedColor="#9747FF"
+            style={[styles.filterChip, showRecentFilter && styles.selectedChip]}
+            selectedColor="#fff"
+            textStyle={showRecentFilter ? styles.selectedChipText : styles.chipText}
           >
             Mais recentes
           </Chip>
@@ -221,34 +246,35 @@ export default function AlertScreen() {
             mode="outlined"
             selected={cityFilter !== ''}
             onPress={() => setIsFilterModalVisible(true)}
-            style={styles.filterChip}
-            selectedColor="#9747FF"
-            icon={cityFilter !== '' ? "check" : undefined}
+            style={[styles.filterChip, cityFilter !== '' && styles.selectedChip]}
+            selectedColor="#fff"
+            textStyle={cityFilter !== '' ? styles.selectedChipText : styles.chipText}
           >
             {cityFilter !== '' ? `Cidade: ${cityFilter}` : 'Cidade'}
           </Chip>
         </ScrollView>
       </View>
-
+            {/* Content */}
       {isLoading ? (
-        <View style={styles.loadingContainer}>
+        <View style={styles.contentContainer}>
           <ActivityIndicator size="large" color="#9747FF" />
           <Text style={styles.loadingText}>Carregando alertas...</Text>
         </View>
       ) : error ? (
-        <View style={styles.errorContainer}>
+        <View style={styles.contentContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color="#9747FF" />
           <Text style={styles.errorText}>{error}</Text>
           <Button 
             mode="contained" 
             onPress={fetchAlerts}
-            style={styles.retryButton}
+            style={styles.actionButton}
           >
             Tentar Novamente
           </Button>
         </View>
       ) : filteredAlerts.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color="#666" />
+        <View style={styles.contentContainer}>
+          <Ionicons name="notifications-outline" size={48} color="#9747FF" />
           <Text style={styles.emptyText}>Nenhum alerta encontrado</Text>
           {(useRadiusFilter || cityFilter || showRecentFilter) && (
             <Button 
@@ -258,14 +284,15 @@ export default function AlertScreen() {
                 setCityFilter('');
                 setShowRecentFilter(false);
               }}
-              style={styles.clearFiltersButton}
+              style={styles.outlinedButton}
+              labelStyle={styles.outlinedButtonText}
             >
               Limpar Filtros
             </Button>
           )}
         </View>
       ) : (
-        <ScrollView style={styles.content}>
+        <ScrollView style={styles.alertsList}>
           {filteredAlerts.map((alert) => (
             <TouchableOpacity
               key={alert.id}
@@ -274,18 +301,37 @@ export default function AlertScreen() {
                 setDetailModalVisible(true);
               }}
             >
-              <Card style={styles.alertCard}>
+              <Card style={[
+                styles.alertCard,
+                { borderLeftColor: getSeverityColor(alert.severity) }
+              ]}>
                 <Card.Content>
                   <View style={styles.cardHeader}>
+                    <View style={[
+                      styles.cityIndicator,
+                      { backgroundColor: getSeverityColor(alert.severity) }
+                    ]} />
                     <Title style={styles.cityName}>{alert.cityName}</Title>
                   </View>
-                  <Paragraph numberOfLines={2} style={styles.message}>
+                  <Paragraph style={styles.messageText}>
                     {alert.message}
                   </Paragraph>
-                  <View style={styles.timeInfo}>
-                    <Ionicons name="time-outline" size={16} color="#666" />
-                    <Text style={styles.timeText}>{alert.createdAt}</Text>
-                    <Text style={styles.userName}>por {alert.userName}</Text>
+                  <View style={styles.cardFooter}>
+                    <View style={styles.timeInfo}>
+                      <Ionicons name="time-outline" size={16} color="#9747FF" />
+                      <Text style={styles.timeText}>{alert.createdAt}</Text>
+                    </View>
+                    <View style={[
+                      styles.severityContainer,
+                      { backgroundColor: `${getSeverityColor(alert.severity)}15` }
+                    ]}>
+                      <Text style={[
+                        styles.severityText,
+                        { color: getSeverityColor(alert.severity) }
+                      ]}>
+                        {getSeverityText(alert.severity)}
+                      </Text>
+                    </View>
                   </View>
                 </Card.Content>
               </Card>
@@ -294,6 +340,7 @@ export default function AlertScreen() {
         </ScrollView>
       )}
 
+      {/* Modals */}
       <Portal>
         <Modal
           visible={isFilterModalVisible}
@@ -355,6 +402,15 @@ export default function AlertScreen() {
                   {selectedAlert.message}
                 </Paragraph>
                 <View style={styles.detailInfo}>
+                  <Text style={styles.detailInfoLabel}>Nível de Severidade:</Text>
+                  <Text style={[
+                    styles.detailInfoText,
+                    { color: getSeverityColor(selectedAlert.severity) }
+                  ]}>
+                    {getSeverityText(selectedAlert.severity)}
+                  </Text>
+                </View>
+                <View style={styles.detailInfo}>
                   <Text style={styles.detailInfoLabel}>Localização:</Text>
                   <Text style={styles.detailInfoText}>
                     {selectedAlert.coordinates.latitude}°, {selectedAlert.coordinates.longitude}°
@@ -383,127 +439,223 @@ export default function AlertScreen() {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
   },
-  header: {
+  backgroundContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 380,
+    overflow: 'hidden',
+  },
+  topWave: {
+    position: 'absolute',
+    top: -30,
+    left: -15,
+    right: -15,
+    height: 120,
     backgroundColor: '#9747FF',
+    borderBottomLeftRadius: 140,
+    borderBottomRightRadius: 90,
+    transform: [
+      { scaleX: 1.2 },
+      { rotate: '-5deg' }
+    ],
+    opacity: 0.85,
+  },
+  middleWave: {
+    position: 'absolute',
+    top: -50,
+    left: -40,
+    right: -20,
+    height: 260,
+    backgroundColor: '#B785FF',
+    borderBottomLeftRadius: 80,
+    borderBottomRightRadius: 160,
+    transform: [
+      { scaleX: 1.3 },
+      { rotate: '3deg' }
+    ],
+    opacity: 0.6,
+  },
+  bottomWave: {
+    position: 'absolute',
+    top: -20,
+    left: -30,
+    right: -40,
+    height: 340,
+    backgroundColor: '#DBC4FF',
+    borderBottomLeftRadius: 180,
+    borderBottomRightRadius: 120,
+    transform: [
+      { scaleX: 1.1 },
+      { rotate: '-2deg' }
+    ],
+    opacity: 0.4,
+  },
+  welcomeSection: {
+    padding: 16,
+    paddingTop: 48,
+    marginBottom: 32,
+  },
+  welcomeText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  subtitleText: {
+    fontSize: 18,
+    color: '#fff',
+    opacity: 0.9,
+  },
+  filterContainer: {
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
     elevation: 4,
-  },
-  dateTimeHeader: {
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  dateTimeText: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  userLoginText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  filterBar: {
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   filterChip: {
     marginRight: 8,
     backgroundColor: '#fff',
     borderColor: '#9747FF',
+    borderWidth: 1.5,
+    height: 36,
   },
-  content: {
+  selectedChip: {
+    backgroundColor: '#9747FF',
+  },
+  chipText: {
+    color: '#9747FF',
+  },
+  selectedChipText: {
+    color: '#fff',
+  },
+  contentContainer: {
     flex: 1,
-    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  alertsList: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
   alertCard: {
     marginBottom: 16,
+    borderRadius: 16,
     elevation: 2,
+    backgroundColor: '#fff',
+    borderLeftWidth: 4,
   },
   cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
+  },
+  cityIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+    opacity: 0.7,
   },
   cityName: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
   },
-  message: {
+  messageText: {
+    fontSize: 14,
     color: '#666',
-    marginBottom: 8,
+    marginBottom: 12,
+    lineHeight: 20,
+    paddingLeft: 16,
+    borderLeftWidth: 1,
+    borderLeftColor: '#DBC4FF',
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F0E6FF',
   },
   timeInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F8F2FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   timeText: {
-    marginLeft: 8,
-    color: '#666',
+    marginLeft: 4,
     fontSize: 12,
+    color: '#9747FF',
+    fontWeight: '500',
   },
-  userName: {
-    marginLeft: 8,
-    color: '#666',
+  severityContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  severityText: {
     fontSize: 12,
-    fontStyle: 'italic',
+    fontWeight: '500',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  actionButton: {
+    backgroundColor: '#9747FF',
+    borderRadius: 8,
+    marginTop: 16,
+    paddingHorizontal: 24,
+  },
+  outlinedButton: {
+    borderColor: '#9747FF',
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  outlinedButtonText: {
+    color: '#9747FF',
   },
   loadingText: {
     marginTop: 16,
     color: '#666',
     fontSize: 16,
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
   errorText: {
     color: '#FF4444',
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: '#9747FF',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    marginTop: 8,
   },
   emptyText: {
     color: '#666',
     fontSize: 16,
-    marginTop: 16,
-    marginBottom: 16,
-  },
-  clearFiltersButton: {
-    borderColor: '#9747FF',
+    marginTop: 8,
+    textAlign: 'center',
   },
   modalContainer: {
     backgroundColor: '#fff',
     padding: 20,
     margin: 20,
-    borderRadius: 8,
+    borderRadius: 16,
+    elevation: 4,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 16,
     color: '#333',
+    marginBottom: 16,
   },
   filterInputContainer: {
     position: 'relative',
@@ -522,12 +674,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
+    marginTop: 8,
   },
   modalButton: {
     flex: 1,
+    borderRadius: 8,
   },
   clearButton: {
     borderColor: '#9747FF',
+    borderWidth: 1.5,
   },
   clearButtonLabel: {
     color: '#9747FF',
@@ -539,15 +694,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 20,
     margin: 20,
-    borderRadius: 8,
+    borderRadius: 16,
     maxHeight: '80%',
+    elevation: 4,
   },
   detailHeader: {
     marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingBottom: 16,
   },
   detailTitle: {
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#333',
   },
   detailContent: {
     marginBottom: 16,
@@ -555,11 +715,11 @@ const styles = StyleSheet.create({
   detailMessage: {
     fontSize: 16,
     color: '#333',
-    marginBottom: 16,
+    marginBottom: 24,
     lineHeight: 24,
   },
   detailInfo: {
-    marginBottom: 8,
+    marginBottom: 16,
   },
   detailInfoLabel: {
     fontSize: 14,
@@ -569,8 +729,11 @@ const styles = StyleSheet.create({
   detailInfoText: {
     fontSize: 16,
     color: '#333',
+    fontWeight: '500',
   },
   closeButton: {
     backgroundColor: '#9747FF',
+    borderRadius: 8,
+    marginTop: 8,
   },
 });
