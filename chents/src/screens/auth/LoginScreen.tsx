@@ -168,8 +168,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: 150,
-    height: 40,
+    width: 250,
+    height: 80,
     tintColor: '#fff',
   },
   surface: {
