@@ -52,7 +52,10 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <Stack.Screen options={{ headerShown: false }} />
       
       <View style={styles.headerBackground}>
@@ -66,14 +69,14 @@ export default function RegisterScreen() {
       <Surface style={styles.surface}>
         <View style={styles.content}>
           <View style={styles.greetingContainer}>
-            <Text style={styles.greeting}>Olá!</Text>
+            <Text style={styles.greeting}>Olá, crie já sua conta!</Text>
           </View>
 
           <View style={styles.inputContainer}>
             <View style={styles.inputWrapper}>
               <TextInput.Icon 
                 icon="account" 
-                color="#9747FF" 
+                color="#22bcc7" 
                 size={20}
                 style={styles.inputIcon}
               />
@@ -87,14 +90,14 @@ export default function RegisterScreen() {
                 activeUnderlineColor="transparent"
                 textColor="#000"
                 placeholderTextColor="#666"
-                theme={{ colors: { primary: '#9747FF' } }}
+                theme={{ colors: { primary: '#22bcc7' } }}
               />
             </View>
 
             <View style={styles.inputWrapper}>
               <TextInput.Icon 
                 icon="email" 
-                color="#9747FF" 
+                color="#22bcc7" 
                 size={20}
                 style={styles.inputIcon}
               />
@@ -110,14 +113,14 @@ export default function RegisterScreen() {
                 activeUnderlineColor="transparent"
                 textColor="#000"
                 placeholderTextColor="#666"
-                theme={{ colors: { primary: '#9747FF' } }}
+                theme={{ colors: { primary: '#22bcc7' } }}
               />
             </View>
 
             <View style={styles.inputWrapper}>
               <TextInput.Icon 
                 icon="lock" 
-                color="#9747FF" 
+                color="#22bcc7" 
                 size={20}
                 style={styles.inputIcon}
               />
@@ -132,21 +135,21 @@ export default function RegisterScreen() {
                   <TextInput.Icon 
                     icon={showPassword ? "eye-off" : "eye"}
                     onPress={() => setShowPassword(!showPassword)}
-                    color="#9747FF"
+                    color="#22bcc7"
                   />
                 }
                 underlineColor="transparent"
                 activeUnderlineColor="transparent"
                 textColor="#000"
                 placeholderTextColor="#666"
-                theme={{ colors: { primary: '#9747FF' } }}
+                theme={{ colors: { primary: '#22bcc7' } }}
               />
             </View>
 
             <View style={styles.inputWrapper}>
               <TextInput.Icon 
                 icon="lock" 
-                color="#9747FF" 
+                color="#22bcc7" 
                 size={20}
                 style={styles.inputIcon}
               />
@@ -161,14 +164,14 @@ export default function RegisterScreen() {
                   <TextInput.Icon 
                     icon={showConfirmPassword ? "eye-off" : "eye"}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    color="#9747FF"
+                    color="#22bcc7"
                   />
                 }
                 underlineColor="transparent"
                 activeUnderlineColor="transparent"
                 textColor="#000"
                 placeholderTextColor="#666"
-                theme={{ colors: { primary: '#9747FF' } }}
+                theme={{ colors: { primary: '#22bcc7' } }}
               />
             </View>
 
@@ -196,7 +199,7 @@ export default function RegisterScreen() {
               loading={loading}
               style={styles.registerButton}
               contentStyle={styles.buttonContent}
-              buttonColor="#9747FF"
+              buttonColor="#22bcc7"
             >
               Criar conta
             </Button>
@@ -205,21 +208,20 @@ export default function RegisterScreen() {
               mode="text"
               onPress={() => router.back()}
               style={styles.backButton}
-              textColor="#9747FF"
+              textColor="#22bcc7"
             >
               Voltar ao login
             </Button>
           </View>
         </View>
       </Surface>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#9747FF',
+    backgroundColor: '#22bcc7',
   },
   headerBackground: {
     height: '30%',
@@ -249,7 +251,7 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#9747FF',
+    color: '#22bcc7',
   },
   inputContainer: {
     gap: 16,
@@ -258,7 +260,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#bef2f6',
     borderRadius: 25,
     paddingLeft: 16,
     paddingRight: 16,
@@ -284,14 +286,14 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 1,
-    borderColor: '#9747FF',
+    borderColor: '#22bcc7',
     borderRadius: 4,
     marginRight: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#9747FF',
+    backgroundColor: '#22bcc7',
   },
   checkmark: {
     color: '#fff',
@@ -304,6 +306,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginTop: 16,
     height: 50,
+    elevation: 2,
   },
   buttonContent: {
     height: 50,

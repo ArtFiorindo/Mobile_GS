@@ -37,7 +37,10 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <Stack.Screen options={{ headerShown: false }} />
       
       <View style={styles.headerBackground}>
@@ -62,7 +65,7 @@ export default function ForgotPasswordScreen() {
             <View style={styles.inputWrapper}>
               <TextInput.Icon 
                 icon="email" 
-                color="#9747FF" 
+                color="#22bcc7" 
                 size={20}
                 style={styles.inputIcon}
               />
@@ -78,7 +81,7 @@ export default function ForgotPasswordScreen() {
                 activeUnderlineColor="transparent"
                 textColor="#000"
                 placeholderTextColor="#666"
-                theme={{ colors: { primary: '#9747FF' } }}
+                theme={{ colors: { primary: '#22bcc7' } }}
               />
             </View>
 
@@ -100,7 +103,7 @@ export default function ForgotPasswordScreen() {
               loading={loading}
               style={styles.resetButton}
               contentStyle={styles.buttonContent}
-              buttonColor="#9747FF"
+              buttonColor="#22bcc7"
             >
               Enviar instruções
             </Button>
@@ -109,21 +112,21 @@ export default function ForgotPasswordScreen() {
               mode="text"
               onPress={() => router.back()}
               style={styles.backButton}
-              textColor="#9747FF"
+              textColor="#22bcc7"
             >
               Voltar ao login
             </Button>
           </View>
         </View>
       </Surface>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#9747FF',
+    backgroundColor: '#22bcc7',
   },
   headerBackground: {
     height: '30%',
@@ -153,7 +156,7 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#9747FF',
+    color: '#22bcc7',
   },
   description: {
     textAlign: 'center',
@@ -168,7 +171,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#bef2f6',
     borderRadius: 25,
     paddingLeft: 16,
     paddingRight: 16,
@@ -189,6 +192,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginTop: 16,
     height: 50,
+    elevation: 2,
   },
   buttonContent: {
     height: 50,

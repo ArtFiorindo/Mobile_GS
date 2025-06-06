@@ -44,7 +44,7 @@ export default function CreateAlertScreen() {
   const [cityName, setCityName] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
   const [locationLoading, setLocationLoading] = useState(true);
-  const [dateTime, setDateTime] = useState('2025-06-05 21:59:45');
+  const [dateTime, setDateTime] = useState('2025-06-05 22:58:48');
   const [severity, setSeverity] = useState<'low' | 'medium' | 'high'>('medium');
   const [showLocationModal, setShowLocationModal] = useState(false);
 
@@ -58,7 +58,7 @@ export default function CreateAlertScreen() {
   }, []);
 
   const updateDateTime = () => {
-    setDateTime('2025-06-05 21:59:45');
+    setDateTime('2025-06-05 22:58:48');
   };
 
   const getCityFromCoordinates = async (latitude: number, longitude: number) => {
@@ -176,26 +176,46 @@ export default function CreateAlertScreen() {
           longitude: location.coords.longitude,
         },
         cityName: locationName.trim(),
-        dateTime,
+        dateTime: '2025-06-05 22:58:48',
         userLogin: 'ArtFiorindo',
         severity,
       });
 
+      // Limpa os campos do formulário
+      setMessage('');
+      setSeverity('medium');
+
+      // Mostra o pop-up com opções após criar o alerta
       RNAlert.alert(
-        'Alerta criado',
-        'Seu alerta de enchente foi registrado com sucesso',
+        'Alerta Criado',
+        'Seu alerta de enchente foi registrado com sucesso!',
         [
-          { 
-            text: 'OK', 
+          {
+            text: 'Ver Meus Alertas',
             onPress: () => {
-              setMessage('');
-              setCityName('');
-              setNeighborhood('');
+              router.push('/alerts/my-alerts');
+            },
+            style: 'default',
+          },
+          {
+            text: 'Criar Outro Alerta',
+            onPress: () => {
+              // Recarrega a localização atual e mantém os outros campos limpos
+              requestLocationPermission();
+            },
+            style: 'default',
+          },
+          {
+            text: 'Voltar para Home',
+            onPress: () => {
               router.back();
-            }
-          }
-        ]
+            },
+            style: 'cancel',
+          },
+        ],
+        { cancelable: false }
       );
+
     } catch (error) {
       console.error('Erro ao criar alerta:', error);
       RNAlert.alert(
@@ -206,8 +226,7 @@ export default function CreateAlertScreen() {
       setLoading(false);
     }
   };
-
-  return (
+    return (
     <SafeAreaView style={styles.container}>
       {/* Background Elements */}
       <View style={styles.backgroundContainer}>
@@ -237,7 +256,7 @@ export default function CreateAlertScreen() {
                 <IconButton
                   icon="map-marker-radius"
                   size={24}
-                  iconColor="#9747FF"
+                  iconColor="#22bcc7"
                   onPress={() => setShowLocationModal(true)}
                 />
               </View>
@@ -260,6 +279,7 @@ export default function CreateAlertScreen() {
                   mode="contained"
                   onPress={requestLocationPermission}
                   style={styles.locationButton}
+                  labelStyle={styles.buttonLabel}
                 >
                   Obter Localização
                 </Button>
@@ -364,6 +384,7 @@ export default function CreateAlertScreen() {
             mode="contained"
             onPress={() => setShowLocationModal(false)}
             style={styles.modalButton}
+            labelStyle={styles.buttonLabel}
           >
             Confirmar
           </Button>
@@ -392,7 +413,7 @@ const styles = StyleSheet.create({
     left: -15,
     right: -15,
     height: 120,
-    backgroundColor: '#9747FF',
+    backgroundColor: '#22bcc7',
     borderBottomLeftRadius: 140,
     borderBottomRightRadius: 90,
     transform: [
@@ -407,7 +428,7 @@ const styles = StyleSheet.create({
     left: -40,
     right: -20,
     height: 260,
-    backgroundColor: '#B785FF',
+    backgroundColor: '#89e5ec',
     borderBottomLeftRadius: 80,
     borderBottomRightRadius: 160,
     transform: [
@@ -422,7 +443,7 @@ const styles = StyleSheet.create({
     left: -30,
     right: -40,
     height: 640,
-    backgroundColor: '#DBC4FF',
+    backgroundColor: '#bef2f6',
     borderBottomLeftRadius: 180,
     borderBottomRightRadius: 120,
     transform: [
@@ -484,7 +505,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   locationInfo: {
-    backgroundColor: '#F8F2FF',
+    backgroundColor: '#e7f7f8',
     padding: 16,
     borderRadius: 12,
   },
@@ -498,14 +519,19 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   locationButton: {
-    backgroundColor: '#9747FF',
+    backgroundColor: '#22bcc7',
+  },
+  buttonLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   severitySection: {
     marginBottom: 24,
   },
   severityButton: {
     borderWidth: 1,
-    borderColor: '#9747FF',
+    borderColor: '#22bcc7',
   },
   severityButtonLowSelected: {
     backgroundColor: '#4CAF5015',
@@ -519,15 +545,15 @@ const styles = StyleSheet.create({
   messageSection: {
     marginBottom: 24,
   },
-    messageInput: {
+  messageInput: {
     backgroundColor: '#fff',
   },
   inputOutline: {
-    borderColor: '#9747FF',
+    borderColor: '#22bcc7',
     borderRadius: 12,
   },
   submitButton: {
-    backgroundColor: '#B785FF',
+    backgroundColor: '#22bcc7',
     paddingVertical: 8,
     borderRadius: 12,
   },
@@ -564,6 +590,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalButton: {
-    backgroundColor: '#9747FF',
+    backgroundColor: '#22bcc7',
   },
 });

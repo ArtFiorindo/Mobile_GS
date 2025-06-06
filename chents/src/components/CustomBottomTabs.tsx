@@ -100,8 +100,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   activeIconContainer: {
-    backgroundColor: '#9747FF',
-    shadowColor: '#9747FF',
+    backgroundColor: '#22bcc7',
+    shadowColor: '#22bcc7',
     shadowOffset: {
       width: 0,
       height: 4,

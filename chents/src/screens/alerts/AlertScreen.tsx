@@ -4,7 +4,8 @@ import {
   StyleSheet, 
   ScrollView, 
   SafeAreaView, 
-  TouchableOpacity 
+  TouchableOpacity,
+  Alert 
 } from 'react-native';
 import { 
   Text, 
@@ -16,13 +17,16 @@ import {
   Card, 
   Title, 
   Paragraph,
-  ActivityIndicator 
+  ActivityIndicator,
+  IconButton,
+  SegmentedButtons
 } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, getDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../../services/firebase';
 import * as Location from 'expo-location';
+import { updateAlert, deleteAlert } from '@services/alerts';
 
 interface Alert {
   id: string;
@@ -39,7 +43,7 @@ interface Alert {
 }
 
 const formatDateTime = () => {
-  return "2025-06-05 21:01:47";
+  return "2025-06-06 14:14:26";
 };
 
 const formatFirestoreTimestamp = (timestamp: any) => {
@@ -68,10 +72,17 @@ export default function AlertScreen() {
   const [showRecentFilter, setShowRecentFilter] = useState(false);
   const [currentDateTime] = useState(formatDateTime());
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editMessage, setEditMessage] = useState('');
+  const [editSeverity, setEditSeverity] = useState<'low' | 'medium' | 'high'>('medium');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!auth.currentUser) {
+      router.replace('/auth/login');
+      return;
+    }
     requestLocationPermission();
     fetchAlerts();
   }, []);
@@ -113,7 +124,7 @@ export default function AlertScreen() {
           createdAt: formatFirestoreTimestamp(data.createdAt),
           message: data.message || '',
           userId: data.userId || '',
-          userName: data.userName || 'Usuário Anônimo',
+          userName: data.userName || 'ArtFiorindo',
           severity: data.severity || 'medium',
         });
       });
@@ -123,6 +134,75 @@ export default function AlertScreen() {
     } catch (error) {
       console.error('Erro ao buscar alertas:', error);
       setError('Não foi possível carregar os alertas. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+    const handleDelete = async (alertId: string, event?: any) => {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    Alert.alert(
+      'Confirmar exclusão',
+      'Tem certeza que deseja excluir este alerta?',
+      [
+        { 
+          text: 'Cancelar',
+          style: 'cancel'
+        },
+        { 
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              await deleteAlert(alertId);
+              await fetchAlerts();
+              Alert.alert('Sucesso', 'Alerta excluído com sucesso');
+              
+              if (detailModalVisible) {
+                setDetailModalVisible(false);
+              }
+            } catch (error: any) {
+              console.error('Erro ao excluir:', error);
+              Alert.alert(
+                'Erro',
+                error.message || 'Não foi possível excluir o alerta'
+              );
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleEdit = (alert: Alert) => {
+    setSelectedAlert(alert);
+    setEditMessage(alert.message);
+    setEditSeverity(alert.severity);
+    setEditModalVisible(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedAlert?.id) return;
+
+    try {
+      setIsLoading(true);
+      await updateAlert(selectedAlert.id, {
+        message: editMessage.trim(),
+        severity: editSeverity,
+      });
+      
+      setEditModalVisible(false);
+      setSelectedAlert(null);
+      await fetchAlerts();
+      
+      Alert.alert('Sucesso', 'Alerta atualizado com sucesso');
+    } catch (error: any) {
+      Alert.alert('Erro', error.message || 'Não foi possível atualizar o alerta');
     } finally {
       setIsLoading(false);
     }
@@ -183,7 +263,7 @@ export default function AlertScreen() {
       case 'high':
         return '#FF5252';
       default:
-        return '#9747FF';
+        return '#22bcc7';
     }
   };
 
@@ -199,27 +279,23 @@ export default function AlertScreen() {
         return 'Médio';
     }
   };
-
-  return (
+    return (
     <SafeAreaView style={styles.container}>
-      {/* Background Elements */}
       <View style={styles.backgroundContainer}>
         <View style={styles.topWave} />
         <View style={styles.middleWave} />
         <View style={styles.bottomWave} />
       </View>
 
-      {/* Welcome Section */}
       <View style={styles.welcomeSection}>
         <Text style={styles.welcomeText}>
-          Olá, {auth.currentUser?.displayName || 'Usuário'}
+          Olá, {auth.currentUser?.displayName || 'ArtFiorindo'}
         </Text>
         <Text style={styles.subtitleText}>
           Acompanhe os alertas em sua região
         </Text>
       </View>
 
-      {/* Filters */}
       <View style={styles.filterContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <Chip
@@ -254,15 +330,15 @@ export default function AlertScreen() {
           </Chip>
         </ScrollView>
       </View>
-            {/* Content */}
+
       {isLoading ? (
         <View style={styles.contentContainer}>
-          <ActivityIndicator size="large" color="#9747FF" />
+          <ActivityIndicator size="large" color="#22bcc7" />
           <Text style={styles.loadingText}>Carregando alertas...</Text>
         </View>
       ) : error ? (
         <View style={styles.contentContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color="#9747FF" />
+          <Ionicons name="alert-circle-outline" size={48} color="#22bcc7" />
           <Text style={styles.errorText}>{error}</Text>
           <Button 
             mode="contained" 
@@ -274,7 +350,7 @@ export default function AlertScreen() {
         </View>
       ) : filteredAlerts.length === 0 ? (
         <View style={styles.contentContainer}>
-          <Ionicons name="notifications-outline" size={48} color="#9747FF" />
+          <Ionicons name="notifications-outline" size={48} color="#22bcc7" />
           <Text style={styles.emptyText}>Nenhum alerta encontrado</Text>
           {(useRadiusFilter || cityFilter || showRecentFilter) && (
             <Button 
@@ -312,13 +388,34 @@ export default function AlertScreen() {
                       { backgroundColor: getSeverityColor(alert.severity) }
                     ]} />
                     <Title style={styles.cityName}>{alert.cityName}</Title>
+                    {alert.userId === auth.currentUser?.uid && (
+                      <View style={styles.actionButtons}>
+                        <IconButton
+                          icon="pencil"
+                          size={20}
+                          iconColor="#22bcc7"
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleEdit(alert);
+                          }}
+                          style={styles.editIcon}
+                        />
+                        <IconButton
+                          icon="delete"
+                          size={20}
+                          iconColor="#FF5252"
+                          onPress={(e) => handleDelete(alert.id, e)}
+                          style={styles.deleteButton}
+                        />
+                      </View>
+                    )}
                   </View>
                   <Paragraph style={styles.messageText}>
                     {alert.message}
                   </Paragraph>
                   <View style={styles.cardFooter}>
                     <View style={styles.timeInfo}>
-                      <Ionicons name="time-outline" size={16} color="#9747FF" />
+                      <Ionicons name="time-outline" size={16} color="#22bcc7" />
                       <Text style={styles.timeText}>{alert.createdAt}</Text>
                     </View>
                     <View style={[
@@ -340,50 +437,87 @@ export default function AlertScreen() {
         </ScrollView>
       )}
 
-      {/* Modals */}
       <Portal>
         <Modal
-          visible={isFilterModalVisible}
-          onDismiss={() => setIsFilterModalVisible(false)}
+          visible={editModalVisible}
+          onDismiss={() => setEditModalVisible(false)}
           contentContainerStyle={styles.modalContainer}
         >
-          <Text style={styles.modalTitle}>Filtrar por cidade</Text>
-          <View style={styles.filterInputContainer}>
-            <TextInput
-              label="Nome da cidade"
-              value={cityFilter}
-              onChangeText={setCityFilter}
-              mode="outlined"
-              style={styles.cityInput}
-            />
-            {cityFilter !== '' && (
-              <TouchableOpacity
-                style={styles.clearInputButton}
-                onPress={() => setCityFilter('')}
+          <View style={styles.editModalContent}>
+            <Text style={styles.modalTitle}>Editar Alerta</Text>
+            
+            <View style={styles.severitySection}>
+              <Text style={styles.sectionLabel}>Severidade:</Text>
+              <SegmentedButtons
+                value={editSeverity}
+                onValueChange={value => setEditSeverity(value as 'low' | 'medium' | 'high')}
+                style={styles.segmentedButtons}
+                buttons={[
+                  {
+                    value: 'low',
+                    label: 'Baixo',
+                    style: [
+                      styles.severityButton,
+                      editSeverity === 'low' && styles.severityButtonSelected,
+                      { borderTopLeftRadius: 12, borderBottomLeftRadius: 12 }
+                    ],
+                    checkedColor: '#4CAF50'
+                  },
+                  {
+                    value: 'medium',
+                    label: 'Médio',
+                    style: [
+                      styles.severityButton,
+                      editSeverity === 'medium' && styles.severityButtonSelected
+                    ],
+                    checkedColor: '#FFC107'
+                  },
+                  {
+                    value: 'high',
+                    label: 'Alto',
+                    style: [
+                      styles.severityButton,
+                      editSeverity === 'high' && styles.severityButtonSelected,
+                      { borderTopRightRadius: 12, borderBottomRightRadius: 12 }
+                    ],
+                    checkedColor: '#FF5252'
+                  }
+                ]}
+              />
+            </View>
+
+            <View style={styles.descriptionSection}>
+              <Text style={styles.sectionLabel}>Descrição:</Text>
+              <TextInput
+                mode="outlined"
+                multiline
+                numberOfLines={4}
+                value={editMessage}
+                onChangeText={setEditMessage}
+                style={styles.messageInput}
+                outlineStyle={styles.inputOutline}
+                placeholder="Descreva a situação da enchente..."
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <Button
+                mode="outlined"
+                onPress={() => setEditModalVisible(false)}
+                style={styles.cancelButton}
+                labelStyle={styles.cancelButtonLabel}
               >
-                <Ionicons name="close-circle" size={24} color="#666" />
-              </TouchableOpacity>
-            )}
-          </View>
-          <View style={styles.modalButtonsContainer}>
-            <Button
-              mode="outlined"
-              onPress={() => {
-                setCityFilter('');
-                setIsFilterModalVisible(false);
-              }}
-              style={[styles.modalButton, styles.clearButton]}
-              labelStyle={styles.clearButtonLabel}
-            >
-              Limpar
-            </Button>
-            <Button
-              mode="contained"
-              onPress={() => setIsFilterModalVisible(false)}
-              style={[styles.modalButton, styles.applyButton]}
-            >
-              Aplicar
-            </Button>
+                Cancelar
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleUpdate}
+                style={styles.saveButton}
+                labelStyle={styles.saveButtonLabel}
+              >
+                Salvar
+              </Button>
+            </View>
           </View>
         </Modal>
 
@@ -393,46 +527,92 @@ export default function AlertScreen() {
           contentContainerStyle={styles.detailModalContainer}
         >
           {selectedAlert && (
-            <>
+            <View style={styles.detailContent}>
               <View style={styles.detailHeader}>
                 <Title style={styles.detailTitle}>{selectedAlert.cityName}</Title>
               </View>
-              <ScrollView style={styles.detailContent}>
-                <Paragraph style={styles.detailMessage}>
-                  {selectedAlert.message}
-                </Paragraph>
-                <View style={styles.detailInfo}>
-                  <Text style={styles.detailInfoLabel}>Nível de Severidade:</Text>
-                  <Text style={[
-                    styles.detailInfoText,
-                    { color: getSeverityColor(selectedAlert.severity) }
-                  ]}>
-                    {getSeverityText(selectedAlert.severity)}
-                  </Text>
-                </View>
-                <View style={styles.detailInfo}>
-                  <Text style={styles.detailInfoLabel}>Localização:</Text>
-                  <Text style={styles.detailInfoText}>
-                    {selectedAlert.coordinates.latitude}°, {selectedAlert.coordinates.longitude}°
-                  </Text>
-                </View>
-                <View style={styles.detailInfo}>
-                  <Text style={styles.detailInfoLabel}>Data e Hora:</Text>
-                  <Text style={styles.detailInfoText}>{selectedAlert.createdAt}</Text>
-                </View>
-                <View style={styles.detailInfo}>
-                  <Text style={styles.detailInfoLabel}>Reportado por:</Text>
-                  <Text style={styles.detailInfoText}>{selectedAlert.userName}</Text>
-                </View>
+
+              <ScrollView style={styles.detailBody}>
+                <Card style={styles.detailCard}>
+                  <Card.Content>
+                    <Paragraph style={styles.detailMessage}>
+                      {selectedAlert.message}
+                    </Paragraph>
+                    
+                    <View style={styles.detailInfo}>
+                      <Text style={styles.detailInfoLabel}>Nível de Severidade:</Text>
+                      <View style={[
+                        styles.severityBadge,
+                        { backgroundColor: getSeverityColor(selectedAlert.severity) + '15' }
+                      ]}>
+                        <Text style={[
+                          styles.severityText,
+                          { color: getSeverityColor(selectedAlert.severity) }
+                        ]}>
+                          {getSeverityText(selectedAlert.severity)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.detailInfo}>
+                      <Text style={styles.detailInfoLabel}>Localização:</Text>
+                      <Text style={styles.detailInfoText}>
+                        {selectedAlert.coordinates.latitude.toFixed(6)}°, 
+                        {selectedAlert.coordinates.longitude.toFixed(6)}°
+                      </Text>
+                    </View>
+
+                    <View style={styles.detailInfo}>
+                      <Text style={styles.detailInfoLabel}>Data e Hora:</Text>
+                      <Text style={styles.detailInfoText}>
+                        {selectedAlert.createdAt}
+                      </Text>
+                    </View>
+
+                    <View style={styles.detailInfo}>
+                      <Text style={styles.detailInfoLabel}>Reportado por:</Text>
+                      <Text style={styles.detailInfoText}>
+                        {selectedAlert.userName}
+                      </Text>
+                    </View>
+                  </Card.Content>
+                </Card>
               </ScrollView>
-              <Button
-                mode="contained"
-                onPress={() => setDetailModalVisible(false)}
-                style={styles.closeButton}
-              >
-                Fechar
-              </Button>
-            </>
+
+              <View style={styles.detailActions}>
+  {selectedAlert.userId === auth.currentUser?.uid && (
+    <>
+      <Button
+        mode="contained"
+        onPress={() => {
+          setDetailModalVisible(false);
+          handleEdit(selectedAlert);
+        }}
+        style={styles.editButton}
+        labelStyle={styles.buttonLabel}
+      >
+        Editar Alerta
+      </Button>
+      <Button
+        mode="contained"
+        onPress={() => handleDelete(selectedAlert.id)}
+        style={styles.deleteDetailButton}  // Alterado aqui
+        labelStyle={styles.deleteDetailButtonLabel}  // Alterado aqui
+      >
+        Excluir Alerta
+      </Button>
+    </>
+  )}
+  <Button
+    mode="outlined"
+    onPress={() => setDetailModalVisible(false)}
+    style={styles.closeButton}
+    labelStyle={styles.closeButtonLabel}
+  >
+    Fechar
+  </Button>
+</View>
+            </View>
           )}
         </Modal>
       </Portal>
@@ -457,8 +637,8 @@ const styles = StyleSheet.create({
     top: -30,
     left: -15,
     right: -15,
-    height: 120,
-    backgroundColor: '#9747FF',
+    height: 180,
+    backgroundColor: '#22bcc7',
     borderBottomLeftRadius: 140,
     borderBottomRightRadius: 90,
     transform: [
@@ -473,7 +653,7 @@ const styles = StyleSheet.create({
     left: -40,
     right: -20,
     height: 260,
-    backgroundColor: '#B785FF',
+    backgroundColor: '#89e5ec',
     borderBottomLeftRadius: 80,
     borderBottomRightRadius: 160,
     transform: [
@@ -488,7 +668,7 @@ const styles = StyleSheet.create({
     left: -30,
     right: -40,
     height: 340,
-    backgroundColor: '#DBC4FF',
+    backgroundColor: '#bef2f6',
     borderBottomLeftRadius: 180,
     borderBottomRightRadius: 120,
     transform: [
@@ -524,15 +704,15 @@ const styles = StyleSheet.create({
   filterChip: {
     marginRight: 8,
     backgroundColor: '#fff',
-    borderColor: '#9747FF',
+    borderColor: '#22bcc7',
     borderWidth: 1.5,
     height: 36,
   },
   selectedChip: {
-    backgroundColor: '#9747FF',
+    backgroundColor: '#22bcc7',
   },
   chipText: {
-    color: '#9747FF',
+    color: '#22bcc7',
   },
   selectedChipText: {
     color: '#fff',
@@ -573,6 +753,18 @@ const styles = StyleSheet.create({
     color: '#333',
     flex: 1,
   },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editIcon: {
+    marginLeft: 8,
+    backgroundColor: '#e3eff0',
+  },
+  deleteButton: {
+    marginLeft: 8,
+    backgroundColor: '#FFE5E5',
+  },
   messageText: {
     fontSize: 14,
     color: '#666',
@@ -580,7 +772,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     paddingLeft: 16,
     borderLeftWidth: 1,
-    borderLeftColor: '#DBC4FF',
+    borderLeftColor: '#bef2f6',
   },
   cardFooter: {
     flexDirection: 'row',
@@ -593,7 +785,7 @@ const styles = StyleSheet.create({
   timeInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F2FF',
+    backgroundColor: '#e3eff0',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -601,7 +793,7 @@ const styles = StyleSheet.create({
   timeText: {
     marginLeft: 4,
     fontSize: 12,
-    color: '#9747FF',
+    color: '#22bcc7',
     fontWeight: '500',
   },
   severityContainer: {
@@ -613,19 +805,181 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  modalContainer: {
+    backgroundColor: '#fff',
+    margin: 20,
+    borderRadius: 16,
+    padding: 24,
+    elevation: 5,
+  },
+  editModalContent: {
+    gap: 24,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 12,
+  },
+  severitySection: {
+    gap: 8,
+  },
+  segmentedButtons: {
+    backgroundColor: '#e3eff0',
+    borderRadius: 12,
+  },
+  severityButton: {
+    borderWidth: 1.5,
+    borderColor: '#22bcc7',
+    backgroundColor: '#fff',
+  },
+  severityButtonSelected: {
+    backgroundColor: '#95f6ff23',
+  },
+  descriptionSection: {
+    gap: 8,
+  },
+  messageInput: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
+  inputOutline: {
+    borderColor: '#22bcc7',
+    borderRadius: 12,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 8,
+  },
+  cancelButton: {
+    borderColor: '#22bcc7',
+    borderWidth: 1.5,
+    borderRadius: 8,
+  },
+  cancelButtonLabel: {
+    color: '#22bcc7',
+  },
+  saveButton: {
+    backgroundColor: '#22bcc7',
+    borderRadius: 8,
+  },
+  saveButtonLabel: {
+    color: '#fff',
+  },
+  detailModalContainer: {
+    backgroundColor: '#fff',
+    margin: 20,
+    borderRadius: 16,
+    padding: 0,
+    maxHeight: '80%',
+    elevation: 5,
+  },
+  detailContent: {
+    flex: 1,
+  },
+  detailHeader: {
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e3eff0',
+  },
+  detailTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  detailBody: {
+    padding: 24,
+  },
+  detailCard: {
+    elevation: 0,
+    backgroundColor: '#f3feff',
+    borderRadius: 12,
+  },
+  detailMessage: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  detailInfo: {
+    marginBottom: 16,
+    gap: 4,
+  },
+  detailInfoLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  detailInfoText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  severityBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  // Adicione estes novos estilos ao StyleSheet
+deleteDetailButton: {
+  backgroundColor: '#FF5252',
+  borderRadius: 8,
+  borderWidth: 0,
+},
+deleteDetailButtonLabel: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: '600',
+},
+detailActions: {
+  padding: 24,
+  paddingTop: 12,
+  borderTopWidth: 1,
+  borderTopColor: '#F0E6FF',
+  gap: 12,
+},
+editButton: {
+  backgroundColor: '#22bcc7',
+  borderRadius: 8,
+  borderWidth: 0,
+},
+buttonLabel: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: '600',
+},
+closeButton: {
+  borderColor: '#22bcc7',
+  borderWidth: 1.5,
+  borderRadius: 8,
+  backgroundColor: 'transparent',
+},
+closeButtonLabel: {
+  color: '#22bcc7',
+  fontSize: 16,
+  fontWeight: '600',
+},
   actionButton: {
-    backgroundColor: '#9747FF',
+    backgroundColor: '#22bcc7',
     borderRadius: 8,
     marginTop: 16,
     paddingHorizontal: 24,
   },
   outlinedButton: {
-    borderColor: '#9747FF',
+    borderColor: '#22bcc7',
     borderRadius: 8,
     marginTop: 16,
   },
   outlinedButtonText: {
-    color: '#9747FF',
+    color: '#22bcc7',
   },
   loadingText: {
     marginTop: 16,
@@ -644,96 +998,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
-  modalContainer: {
-    backgroundColor: '#fff',
-    padding: 20,
-    margin: 20,
-    borderRadius: 16,
-    elevation: 4,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
-  },
-  filterInputContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  cityInput: {
-    backgroundColor: '#fff',
-  },
-  clearInputButton: {
-    position: 'absolute',
-    right: 12,
-    top: 20,
-    zIndex: 1,
-  },
-  modalButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 8,
-  },
-  modalButton: {
-    flex: 1,
-    borderRadius: 8,
-  },
-  clearButton: {
-    borderColor: '#9747FF',
-    borderWidth: 1.5,
-  },
-  clearButtonLabel: {
-    color: '#9747FF',
-  },
-  applyButton: {
-    backgroundColor: '#9747FF',
-  },
-  detailModalContainer: {
-    backgroundColor: '#fff',
-    padding: 20,
-    margin: 20,
-    borderRadius: 16,
-    maxHeight: '80%',
-    elevation: 4,
-  },
-  detailHeader: {
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    paddingBottom: 16,
-  },
-  detailTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  detailContent: {
-    marginBottom: 16,
-  },
-  detailMessage: {
+  deleteButtonLabel: {
+    color: '#FF5252',
     fontSize: 16,
-    color: '#333',
-    marginBottom: 24,
-    lineHeight: 24,
-  },
-  detailInfo: {
-    marginBottom: 16,
-  },
-  detailInfoLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  detailInfoText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-  },
-  closeButton: {
-    backgroundColor: '#9747FF',
-    borderRadius: 8,
-    marginTop: 8,
+    fontWeight: '600',
   },
 });
+
+export default AlertScreen;
