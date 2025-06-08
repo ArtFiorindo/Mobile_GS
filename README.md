@@ -6,6 +6,8 @@
 
 Chents é uma aplicação móvel desenvolvida para ajudar comunidades a se prevenirem e se manterem informadas sobre enchentes em suas regiões. O sistema permite que usuários criem e compartilhem alertas em tempo real sobre situações de alagamento, fornecendo informações cruciais para a segurança da população.
 
+Link vídeo do projeto: https://youtube.com/shorts/0jZpyx_LGyY
+
 ### Objetivo
 
 O objetivo principal é criar uma rede colaborativa de informações sobre enchentes, permitindo que:

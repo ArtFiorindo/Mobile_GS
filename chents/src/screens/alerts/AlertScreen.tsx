@@ -438,6 +438,72 @@ export default function AlertScreen() {
       )}
 
       <Portal>
+
+      <Modal
+  visible={isFilterModalVisible}
+  onDismiss={() => setIsFilterModalVisible(false)}
+  contentContainerStyle={styles.cityFilterModalContainer}
+>
+  <View style={styles.cityFilterModalContent}>
+    <View style={styles.cityFilterHeader}>
+      <Text style={styles.cityFilterTitle}>Filtrar por Cidade</Text>
+      <IconButton 
+        icon="close" 
+        size={24} 
+        onPress={() => setIsFilterModalVisible(false)}
+        style={styles.cityFilterCloseButton}
+        iconColor="#666"
+      />
+    </View>
+    
+    <View style={styles.cityFilterInputContainer}>
+      <Ionicons name="location-outline" size={20} color="#22bcc7" style={styles.cityFilterIcon} />
+      <TextInput
+        label=""
+        value={cityFilter}
+        onChangeText={setCityFilter}
+        mode="flat"
+        style={styles.cityFilterInput}
+        placeholder="Digite o nome da cidade"
+        placeholderTextColor="#999"
+        underlineColor="transparent"
+        activeUnderlineColor="#22bcc7"
+        theme={{
+          colors: {
+            primary: '#22bcc7',
+            background: '#f5feff'
+          }
+        }}
+      />
+    </View>
+    
+    <View style={styles.cityFilterButtons}>
+      <Button
+        mode="outlined"
+        onPress={() => {
+          setCityFilter('');
+          setIsFilterModalVisible(false);
+          applyFilters();
+        }}
+        style={styles.cityFilterClearButton}
+        labelStyle={styles.cityFilterButtonLabel}
+      >
+        Limpar
+      </Button>
+      <Button
+        mode="contained"
+        onPress={() => {
+          setIsFilterModalVisible(false);
+          applyFilters();
+        }}
+        style={styles.cityFilterApplyButton}
+        labelStyle={styles.cityFilterButtonLabel}
+      >
+        Aplicar
+      </Button>
+    </View>
+  </View>
+</Modal>
         <Modal
           visible={editModalVisible}
           onDismiss={() => setEditModalVisible(false)}
@@ -928,7 +994,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
-  // Adicione estes novos estilos ao StyleSheet
 deleteDetailButton: {
   backgroundColor: '#FF5252',
   borderRadius: 8,
@@ -1003,6 +1068,74 @@ closeButtonLabel: {
     fontSize: 16,
     fontWeight: '600',
   },
+  cityFilterModalContainer: {
+  backgroundColor: '#fff',
+  margin: 20,
+  borderRadius: 20,
+  overflow: 'hidden',
+  elevation: 5,
+},
+cityFilterModalContent: {
+  padding: 0,
+},
+cityFilterHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: 20,
+  paddingBottom: 10,
+  backgroundColor: '#f5feff',
+  borderBottomWidth: 1,
+  borderBottomColor: '#e0f7fa',
+},
+cityFilterTitle: {
+  fontSize: 20,
+  fontWeight: '600',
+  color: '#22bcc7',
+},
+cityFilterCloseButton: {
+  margin: 0,
+},
+cityFilterInputContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: 20,
+  paddingTop: 20,
+  backgroundColor: '#f5feff',
+},
+cityFilterIcon: {
+  marginRight: 10,
+},
+cityFilterInput: {
+  flex: 1,
+  backgroundColor: '#f5feff',
+  paddingVertical: 8,
+},
+cityFilterButtons: {
+  flexDirection: 'row',
+  justifyContent: 'flex-end',
+  padding: 20,
+  paddingTop: 10,
+  gap: 12,
+  backgroundColor: '#fff',
+  borderTopWidth: 1,
+  borderTopColor: '#f0f0f0',
+},
+cityFilterClearButton: {
+  borderRadius: 10,
+  borderWidth: 1.5,
+  borderColor: '#22bcc7',
+  backgroundColor: 'transparent',
+},
+cityFilterApplyButton: {
+  borderRadius: 10,
+  backgroundColor: '#22bcc7',
+},
+cityFilterButtonLabel: {
+  fontSize: 15,
+  fontWeight: '600',
+  letterSpacing: 0.5,
+},
 });
 
 export default AlertScreen;
